@@ -40,17 +40,17 @@ note "Checking for NVIDIA GPU"
 
 [[ $(lspci | grep NVIDIA) ]] && success "[OK] Found NVIDIA GPU" || error "[Warning] NVIDIA GPU not detected, using CPU-only install..."
 
-if [[ $(which nvidia-smi) ]]; then 
-    driver-version=$(nvidia-smi | grep Driver | cut -d " " -f 3) 
-    note "Driver Version = ${driver-version}"
-    if [[ ${driver-version%.*}+0 -lt 440 ]]; then
-        error "Your NVIDIA Driver is out of date! ... Updating"
-        #add driver update
-    fi
-else
-    error "[Warning] NVIDIA Driver not installed" 
-    # install driver
-fi
+#if [[ $(which nvidia-smi) ]]; then 
+#    driver-version=$(nvidia-smi | grep Driver | cut -d " " -f 3) 
+#    note "Driver Version = ${driver-version}"
+#    if [[ ${driver-version%.*}+0 -lt 440 ]]; then
+#        error "Your NVIDIA Driver is out of date! ... Updating"
+#        #add driver update
+#    fi
+#else
+#    error "[Warning] NVIDIA Driver not installed" 
+#    # install driver
+#fi
 
 #
 # Install Cockpit
@@ -59,10 +59,10 @@ fi
 note "Installing Cockpit ..."
 
 if grep -q 'bionic' /etc/os-release; then
-  apt-get install --yes -t bionic-backports cockpit && success "[OK] Cockpit installed" \
+  apt-get install --yes -q -t bionic-backports cockpit && success "[OK] Cockpit installed" \
     || error "[Fail] Cockpit not installed"
 else
-  apt-get install --yes cockpit && success "[OK] Cockpit installed" \
+  apt-get install --yes -q cockpit && success "[OK] Cockpit installed" \
     || error "[Fail] Cockpit not installed"
 fi
 
@@ -97,7 +97,7 @@ EOF
 chmod 755 /usr/local/sbin/add-pslabs-variant_id.sh
 
 note "setup direvent to monitor changes to /etc/os-release ..."
-apt-get install --yes direvent
+apt-get install --yes -q direvent
 
 cat << EOF > /etc/direvent.conf
 # See direvent.conf(5) for more information
@@ -158,7 +158,7 @@ KERNELS_DIR=${JUPYTER_SYS_DIR}/kernels
 DOCS_DIR=${JUPYTER_SYS_DIR}/docs-and-examples
 
 # Install extra packages (may already be installed)
-apt-get install --yes curl openssl build-essential emacs-nox
+apt-get install --yes -q curl openssl build-essential emacs-nox
 
 #
 # Install conda (globally)
@@ -170,7 +170,7 @@ echo "deb [arch=amd64] https://repo.anaconda.com/pkgs/misc/debrepo/conda stable 
 
 # Install
 apt-get update
-apt-get install --yes conda
+apt-get install --yes -q conda
 
 # Setup PATH and Environment for conda on login
 ln -s ${CONDA_HOME}/etc/profile.d/conda.sh /etc/profile.d/conda.sh
@@ -179,23 +179,23 @@ ln -s ${CONDA_HOME}/etc/profile.d/conda.sh /etc/profile.d/conda.sh
 . /etc/profile.d/conda.sh
 
 # Update miniconda packages
-conda update --yes conda
-conda update --yes python
-conda update --yes --all
+conda update --yes -q conda
+conda update --yes -q python
+conda update --yes -q --all
 
 # Add conda-forge to top of package search
-#conda config --yes --add channels conda-forge
+#conda config --yes -q --add channels conda-forge
 
 #
 # Install JupyterHub with conda
 #
 
 # Create conda env for JupyterHub and install it
-conda create --yes --name jupyterhub  -c conda-forge jupyterhub jupyterlab ipywidgets nodejs=10
+conda create --yes -q --name jupyterhub  -c conda-forge jupyterhub jupyterlab ipywidgets nodejs=10
 
 # Looks like we need a sys nodejs for Ubuntu 18.04
 # Install nodejs for the http-proxy
-apt install --yes nodejs npm
+apt-get install --yes -q -q nodejs npm
 npm install -g configurable-http-proxy
 
 # Set highest priority channel to conda-forge
@@ -206,7 +206,7 @@ touch $JHUB_HOME/.condarc
 conda config --prepend channels conda-forge
 conda config --set channel_priority false
 # go ahead and update to mixed channels now
-conda update --yes --all
+conda update --yes -q --all
 
 #
 # create and setup jupyterhub config file
@@ -272,8 +272,8 @@ cd ${SCRIPT_HOME}
 
 add_kernel() {
     # Args: "env-name" "package-name(s)" "display-name" "icon"
-    ${CONDA_HOME}/bin/conda create --yes --name $1 $2
-    ${CONDA_HOME}/bin/conda install --yes --name $1 ipykernel
+    ${CONDA_HOME}/bin/conda create --yes -q --name $1 $2
+    ${CONDA_HOME}/bin/conda install --yes -q --name $1 ipykernel
     ${CONDA_HOME}/envs/$1/bin/python -m ipykernel install --name $1 --display-name "$3"
     if [[ -f "kernel-icons/$4" ]]; then
         cp kernel-icons/$4 $KERNELS_DIR/$1/logo-64x64.png
@@ -287,7 +287,7 @@ add_kernel() {
 add_kernel "pytorch-gpu" "pytorch torchvision -c pytorch" "PyTorch GPU" "pytorch-logo-light.png" 
 
 
-#${CONDA_HOME}/bin/conda create --yes --name anaconda3 anaconda ipykernel
+#${CONDA_HOME}/bin/conda create --yes -q --name anaconda3 anaconda ipykernel
 #${CONDA_HOME}/envs/anaconda3/bin/python -m ipykernel install --name 'anaconda3' --display-name "Anaconda3 All"
 #cp kernel-icons/anacondalogo.png ${KERNELS_DIR}/anaconda3/logo-64x64.png
 
