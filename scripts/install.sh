@@ -261,7 +261,7 @@ systemctl enable jupyterhub.service
 #
 # remove the jupyter kernelspec for the system miniconda python3 
 #
-${JHUB_HOME}/bin/jupyter kernelspec remove python3 -y
+${JHUB_HOME}/bin/jupyter kernelspec remove -y python3 
 
 #
 # Add some extra kernels for JupyterLab
@@ -281,7 +281,7 @@ add_kernel() {
 }
 
 # Anaconda3
-add_kernel "anaconda3" "anaconda" "Anaconda3 All" "anacondalogo.png"  
+#add_kernel "anaconda3" "anaconda" "Anaconda3 All" "anacondalogo.png"  
 #add_kernel "tensorflow2-gpu" "tensorflow-gpu" "TensorFlow2 GPU" "tensorflow.png" 
 #add_kernel "tensorflow2-cpu" "tensorflow" "TensorFlow2 CPU" "tensorflow.png" 
 add_kernel "pytorch-gpu" "pytorch torchvision -c pytorch" "PyTorch GPU" "pytorch-logo-light.png" 
@@ -299,8 +299,8 @@ add_kernel "pytorch-gpu" "pytorch torchvision -c pytorch" "PyTorch GPU" "pytorch
 # make sure we are in the script dir
 cd ${SCRIPT_HOME}
 
-cp jhub-branding/puget_systems_logo_white.png ${JHUB_HOME}/share/jupyterhub/static/images/
-cp jhub-branding/pslabs-login.html  ${JHUB_HOME}/share/jupyterhub/templates/
+cp -a jhub-branding/puget_systems_logo_white.png ${JHUB_HOME}/share/jupyterhub/static/images/
+cp -a jhub-branding/pslabs-login.html  ${JHUB_HOME}/share/jupyterhub/templates/
 
 cd ${JHUB_HOME}/share/jupyterhub/templates
 mv login.html login.html-orig
