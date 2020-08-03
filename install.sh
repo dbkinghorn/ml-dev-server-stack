@@ -9,6 +9,8 @@
 # and compatability with the server stack setup configurations
 #
 
+set -e
+
 datestamp=​$(date +"%Y%m%d%H%M")
 
 ERRORCOLOR=$(tput setaf 1)    # Red
@@ -36,7 +38,7 @@ fi
 
 note "Checking for NVIDIA GPU"
 
-[[ lspci | grep NVIDIA ]] && success "[OK] Found NVIDIA GPU" || error "[Warning] NVIDIA GPU not detected, using CPU-only install..."
+[[ $(lspci | grep NVIDIA) ]] && success "[OK] Found NVIDIA GPU" || error "[Warning] NVIDIA GPU not detected, using CPU-only install..."
 
 if [[ $(which nvidia-smi) ]]; then 
     driver-version=$(nvidia-smi | grep Driver | cut -d " " -f 3) 
@@ -144,6 +146,6 @@ success "[OK] Cockpit installed"
 
 note "Installing JupyterHub ..."
 
-[[ ./install-jhub.sh ]] && success "JupyterHub Installed and Configured" || error "[Fail] JupyterHub install script failed $(exit 1)"
+[[ $(./install-jhub.sh) ]] && success "JupyterHub Installed and Configured" || error "[Fail] JupyterHub install script failed"
 
 exit 0
