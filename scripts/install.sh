@@ -193,6 +193,11 @@ conda update --yes --all
 # Create conda env for JupyterHub and install it
 conda create --yes --name jupyterhub  -c conda-forge jupyterhub jupyterlab ipywidgets nodejs=10
 
+# Looks like we need a sys nodejs for Ubuntu 18.04
+# Install nodejs for the http-proxy
+apt install --yes nodejs npm
+npm install -g configurable-http-proxy
+
 # Set highest priority channel to conda-forge
 # to keep conda update from downgrading to anaconda channel
 # This all needs to happen in the jupyterhub env!
@@ -289,7 +294,7 @@ add_kernel "pytorch-gpu" "pytorch torchvision -c pytorch" "PyTorch GPU" "pytorch
 #
 # remove the jupyter kernelspec for the system miniconda python3 
 #
-${JHUB_HOME}/bin/jupyter kernelspec remove -y python3 
+echo "y" | ${JHUB_HOME}/bin/jupyter kernelspec remove -y python3 
 
 #
 # Add PSlabs branding to jupyterhub login page
@@ -298,8 +303,8 @@ ${JHUB_HOME}/bin/jupyter kernelspec remove -y python3
 # make sure we are in the script dir
 cd ${SCRIPT_HOME}
 
-cp -a jhub-branding/puget_systems_logo_white.png ${JHUB_HOME}/share/jupyterhub/static/images/
-cp -a jhub-branding/pslabs-login.html  ${JHUB_HOME}/share/jupyterhub/templates/
+cp -dR jhub-branding/puget_systems_logo_white.png ${JHUB_HOME}/share/jupyterhub/static/images/
+cp -dR jhub-branding/pslabs-login.html  ${JHUB_HOME}/share/jupyterhub/templates/
 
 cd ${JHUB_HOME}/share/jupyterhub/templates
 mv login.html login.html-orig
