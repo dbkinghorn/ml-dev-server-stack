@@ -259,11 +259,6 @@ systemctl start jupyterhub.service
 systemctl enable jupyterhub.service
 
 #
-# remove the jupyter kernelspec for the system miniconda python3 
-#
-${JHUB_HOME}/bin/jupyter kernelspec remove -y python3 
-
-#
 # Add some extra kernels for JupyterLab
 #
 
@@ -291,6 +286,10 @@ add_kernel "pytorch-gpu" "pytorch torchvision -c pytorch" "PyTorch GPU" "pytorch
 #${CONDA_HOME}/envs/anaconda3/bin/python -m ipykernel install --name 'anaconda3' --display-name "Anaconda3 All"
 #cp kernel-icons/anacondalogo.png ${KERNELS_DIR}/anaconda3/logo-64x64.png
 
+#
+# remove the jupyter kernelspec for the system miniconda python3 
+#
+${JHUB_HOME}/bin/jupyter kernelspec remove -y python3 
 
 #
 # Add PSlabs branding to jupyterhub login page
