@@ -293,7 +293,7 @@ add_kernel "pytorch-gpu" "pytorch torchvision -c pytorch" "PyTorch GPU" "pytorch
 #
 # remove the jupyter kernelspec for the system miniconda python3 
 #
-echo "y" | ${JHUB_HOME}/bin/jupyter kernelspec remove -y python3 
+echo "y" | ${JHUB_HOME}/bin/jupyter kernelspec remove python3 
 
 #
 # Add PSlabs branding to jupyterhub login page
