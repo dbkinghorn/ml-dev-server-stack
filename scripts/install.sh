@@ -193,7 +193,7 @@ conda create --yes -q --name jupyterhub  -c conda-forge jupyterhub jupyterlab ip
 
 # Looks like we need a sys nodejs for Ubuntu 18.04
 # Install nodejs for the http-proxy
-apt-get install --yes -q -q nodejs npm
+apt-get install --yes -q nodejs npm
 npm install -g configurable-http-proxy
 
 # Set highest priority channel to conda-forge
