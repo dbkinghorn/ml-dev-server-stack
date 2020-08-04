@@ -11,6 +11,8 @@
 
 set -e
 
+SCRIPT_HOME=$(pwd)
+
 ERRORCOLOR=$(tput setaf 1)    # Red
 SUCCESSCOLOR=$(tput setaf 2)  # Green
 NOTECOLOR=$(tput setaf 3)     # Yellow
@@ -146,7 +148,6 @@ success "[OK] Cockpit installed"
 note "Installing JupyterHub ..."
 
 # 
-SCRIPT_HOME=$PWD
 
 CONDA_HOME=/opt/conda
 JHUB_HOME=${CONDA_HOME}/envs/jupyterhub
@@ -188,13 +189,13 @@ conda update --yes -q --all
 # Install JupyterHub with conda
 #
 
-# Create conda env for JupyterHub and install it
-conda create --yes -q --name jupyterhub  -c conda-forge jupyterhub jupyterlab ipywidgets nodejs=10
-
 # Looks like we need a sys nodejs for Ubuntu 18.04
 # Install nodejs for the http-proxy
 apt-get install --yes -q nodejs npm
 npm install -g configurable-http-proxy
+
+# Create conda env for JupyterHub and install it
+conda create --yes -q --name jupyterhub  -c conda-forge jupyterhub jupyterlab ipywidgets
 
 # Set highest priority channel to conda-forge
 # to keep conda update from downgrading to anaconda channel
