@@ -11,8 +11,6 @@
 
 set -e
 
-datestamp=​$(date +"%Y%m%d%H%M")
-
 ERRORCOLOR=$(tput setaf 1)    # Red
 SUCCESSCOLOR=$(tput setaf 2)  # Green
 NOTECOLOR=$(tput setaf 3)     # Yellow
