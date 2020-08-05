@@ -3,9 +3,9 @@
 # install
 
 if grep -q 'bionic' /etc/os-release; then
-  apt-get install --yes -t bionic-backports cockpit
+  apt-get install --yes -qq -t bionic-backports cockpit
 else
-  apt-get install --yes cockpit
+  apt-get install --yes -qq cockpit
 fi
 
 # add a cockpit config file
@@ -40,7 +40,7 @@ EOF
 chmod 755 /usr/local/sbin/add-pslabs-variant_id.sh
 
 # setup direvent to monitor changes to os-release
-apt-get install direvent
+apt-get install --yes --qq direvent
 
 cat << EOF > /etc/direvent.conf
 # This is the configuration file for direvent. Read

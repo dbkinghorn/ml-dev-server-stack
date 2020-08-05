@@ -9,7 +9,7 @@
 # and compatability with the server stack setup configurations
 #
 
-set -e
+set -o pipefail
 
 SCRIPT_HOME=$(pwd)
 
@@ -40,17 +40,17 @@ note "Checking for NVIDIA GPU"
 
 [[ $(lspci | grep NVIDIA) ]] && success "[OK] Found NVIDIA GPU" || error "[Warning] NVIDIA GPU not detected, using CPU-only install..."
 
-#if [[ $(which nvidia-smi) ]]; then 
-#    driver-version=$(nvidia-smi | grep Driver | cut -d " " -f 3) 
-#    note "Driver Version = ${driver-version}"
-#    if [[ ${driver-version%.*}+0 -lt 440 ]]; then
-#        error "Your NVIDIA Driver is out of date! ... Updating"
-#        #add driver update
-#    fi
-#else
-#    error "[Warning] NVIDIA Driver not installed" 
-#    # install driver
-#fi
+if [[ $(which nvidia-smi) ]]; then 
+    driver-version=$(nvidia-smi | grep Driver | cut -d " " -f 3) 
+    note "Driver Version = ${driver-version}"
+    if [[ ${driver-version%.*}+0 -lt 440 ]]; then
+        error "Your NVIDIA Driver is out of date! ... Updating"
+        #add driver update
+    fi
+else
+    error "[Warning] NVIDIA Driver not installed" 
+    # install driver
+fi
 
 #
 # Install Cockpit
@@ -59,10 +59,10 @@ note "Checking for NVIDIA GPU"
 note "Installing Cockpit ..."
 
 if grep -q 'bionic' /etc/os-release; then
-  apt-get install --yes -q -t bionic-backports cockpit && success "[OK] Cockpit installed" \
+  apt-get install --yes -qq -t bionic-backports cockpit && success "[OK] Cockpit installed" \
     || error "[Fail] Cockpit not installed"
 else
-  apt-get install --yes -q cockpit && success "[OK] Cockpit installed" \
+  apt-get install --yes -qq cockpit && success "[OK] Cockpit installed" \
     || error "[Fail] Cockpit not installed"
 fi
 
@@ -77,7 +77,11 @@ EOF
 note "Adding Puget Systems Labs branding to cockpit..."
 
 # add PSlabs variant id to /etc/os-release
-echo "VARIANT_ID=pslabs" >> /etc/os-release
+cat << EOF >> /etc/os-release 
+'VARIANT_ID=pslabs' 
+
+EOF
+
 cp -a ubuntu-pslabs /usr/share/cockpit/branding/
 
 
@@ -97,7 +101,7 @@ EOF
 chmod 755 /usr/local/sbin/add-pslabs-variant_id.sh
 
 note "setup direvent to monitor changes to /etc/os-release ..."
-apt-get install --yes -q direvent
+apt-get install --yes -qq direvent
 
 cat << EOF > /etc/direvent.conf
 # See direvent.conf(5) for more information
@@ -154,10 +158,9 @@ JHUB_HOME=${CONDA_HOME}/envs/jupyterhub
 JHUB_CONFIG=${JHUB_HOME}/etc/jupyterhub/jupyterhub_config.py
 JUPYTER_SYS_DIR=/usr/local/share/jupyter
 KERNELS_DIR=${JUPYTER_SYS_DIR}/kernels
-DOCS_DIR=${JUPYTER_SYS_DIR}/docs-and-examples
 
 # Install extra packages (may already be installed)
-apt-get install --yes -q curl openssl build-essential emacs-nox
+apt-get install --yes -qq curl openssl build-essential emacs-nox
 
 #
 # Install conda (globally)
@@ -169,7 +172,7 @@ echo "deb [arch=amd64] https://repo.anaconda.com/pkgs/misc/debrepo/conda stable 
 
 # Install
 apt-get update
-apt-get install --yes -q conda
+apt-get install --yes -qq conda  
 
 # Setup PATH and Environment for conda on login
 ln -s ${CONDA_HOME}/etc/profile.d/conda.sh /etc/profile.d/conda.sh
@@ -182,17 +185,9 @@ conda update --yes -q conda
 conda update --yes -q python
 conda update --yes -q --all
 
-# Add conda-forge to top of package search
-#conda config --yes -q --add channels conda-forge
-
 #
 # Install JupyterHub with conda
 #
-
-# Looks like we need a sys nodejs for Ubuntu 18.04
-# Install nodejs for the http-proxy
-apt-get install --yes -q nodejs npm
-npm install -g configurable-http-proxy
 
 # Create conda env for JupyterHub and install it
 conda create --yes -q --name jupyterhub  -c conda-forge jupyterhub jupyterlab ipywidgets
@@ -202,8 +197,8 @@ conda create --yes -q --name jupyterhub  -c conda-forge jupyterhub jupyterlab ip
 # This all needs to happen in the jupyterhub env!
 conda activate jupyterhub
 touch $JHUB_HOME/.condarc 
-conda config --prepend channels conda-forge
-conda config --set channel_priority false
+conda config --env --prepend channels conda-forge
+conda config --env --set channel_priority false
 # go ahead and update to mixed channels now
 conda update --yes -q --all
 
@@ -218,7 +213,11 @@ ${JHUB_HOME}/bin/jupyterhub --generate-config
 sed -i "s/#c\.Spawner\.default_url = ''/c\.Spawner\.default_url = '\/lab'/" jupyterhub_config.py
 
 # don't show the install Python kernel spec
-sed -i "s/#c\.KernelSpecManager\.ensure_native_kernel = ''/c\.KernelSpecManager\.ensure_native_kernel = False/" jupyterhub_config.py
+cat << EOF >> jupyterhub_config.py
+# Allow removal of the default python3 kernelspec
+c.KernelSpecManager.ensure_native_kernel = False
+
+EOF
 
 # add SSL cert and key for using https to access hub
 mkdir -p ${JHUB_HOME}/etc/jupyterhub/ssl-certs
