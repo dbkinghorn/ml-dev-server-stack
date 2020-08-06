@@ -35,24 +35,40 @@ source /etc/os-release
 if [[ $NAME == "Ubuntu" ]] && [[ ${VERSION_ID/./}+0 -ge 1804 ]]; then
     success "[OK] ${PRETTY_NAME}";
 else
-    error "OS must be Ubuntu 18.04 or greater"
+    error "[STOP] OS must be Ubuntu 18.04 or greater"
     exit 1
 fi
 
 note "Checking for NVIDIA GPU"
 
-[[ $(lspci | grep NVIDIA) ]] && success "[OK] Found NVIDIA GPU" || error "[Warning] NVIDIA GPU not detected, using CPU-only install..."
+NVIDIA_DRIVER_VERSION='440'
+USEGPU=''
 
-if [[ $(which nvidia-smi) ]]; then 
-    driver-version=$(nvidia-smi | grep Driver | cut -d " " -f 3) 
-    note "Driver Version = ${driver-version}"
-    if [[ ${driver-version%.*}+0 -lt 440 ]]; then
-        error "Your NVIDIA Driver is out of date! ... Updating"
-        #add driver update
+function add_nv_driver() {
+    # Args: "driver version"
+    apt-get install -q dkms
+    add-apt-repository ppa:graphics-drivers/ppa
+    apt-get update
+    apt-get install--no-install-recommends --yes -qq nvidia-driver-$1
+}
+
+if [[ $(lspci | grep -q NVIDIA) ]]; then
+    success "[OK] Found NVIDIA GPU"
+    USEGPU='True'
+    if [[ $(which nvidia-smi) ]]; then 
+        driver-version=$(nvidia-smi | grep Driver | cut -d " " -f 3) 
+        note "Driver Version = ${driver-version}"
+        if [[ ${driver-version%.*}+0 -lt 440 ]]; then
+            error "Your NVIDIA Driver is out of date! ... Updating"
+            add_nv_driver ${NVIDIA_DRIVER_VERSION} || error "!!Driver install failed!!"
+        fi
+    else
+        error "[Warning] NVIDIA Driver not installed ... Installing now" 
+        add_nv_driver ${NVIDIA_DRIVER_VERSION} || error "!!Driver install failed!!"
     fi
 else
-    error "[Warning] NVIDIA Driver not installed" 
-    # install driver
+    error "[Warning] NVIDIA GPU not detected, using CPU-only install..."
+    USEGPU='False'
 fi
 
 #
@@ -263,7 +279,7 @@ systemctl enable jupyterhub.service
 # make sure we are in the script dir
 cd ${SCRIPT_HOME}
 
-add_kernel() {
+function add_kernel() {
     # Args: "env-name" "package-name(s)" "display-name" "icon"
     ${CONDA_HOME}/bin/conda create --yes --name $1 $2
     ${CONDA_HOME}/bin/conda install --yes --name $1 ipykernel
@@ -274,8 +290,8 @@ add_kernel() {
 }
 
 # Anaconda3
-#add_kernel "anaconda3" "anaconda" "Anaconda3 All" "anacondalogo.png"  
-#add_kernel "tensorflow2-gpu" "tensorflow-gpu" "TensorFlow2 GPU" "tensorflow.png" 
+add_kernel "anaconda3" "anaconda" "Anaconda Python3" "anacondalogo.png"  
+add_kernel "tensorflow2-gpu" "tensorflow-gpu" "TensorFlow2 GPU" "tensorflow.png" 
 #add_kernel "tensorflow2-cpu" "tensorflow" "TensorFlow2 CPU" "tensorflow.png" 
 add_kernel "pytorch-gpu" "pytorch torchvision -c pytorch" "PyTorch GPU" "pytorch-logo-light.png" 
 
