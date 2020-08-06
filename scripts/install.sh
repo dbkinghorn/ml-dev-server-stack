@@ -11,6 +11,9 @@
 
 set -o pipefail
 
+#set -x
+#trap read debug
+
 SCRIPT_HOME=$(pwd)
 
 ERRORCOLOR=$(tput setaf 1)    # Red
@@ -68,19 +71,15 @@ fi
 
 note "Adding cockpit config ..."
 
-cat << EOF > /etc/cockpit/cockpit.conf
+sudo tee -a /etc/cockpit/cockpit.conf << 'EOF'
 [Session]
 IdleTimeout=0
-
 EOF
 
 note "Adding Puget Systems Labs branding to cockpit..."
 
 # add PSlabs variant id to /etc/os-release
-cat << EOF >> /etc/os-release 
-'VARIANT_ID=pslabs' 
-
-EOF
+echo "VARIANT_ID=pslabs" | sudo tee -a /etc/os-release 
 
 cp -a ubuntu-pslabs /usr/share/cockpit/branding/
 
@@ -88,22 +87,21 @@ cp -a ubuntu-pslabs /usr/share/cockpit/branding/
 # make it update proof
 
 # add a script to set variant id
-cat << EOF > /usr/local/sbin/add-pslabs-variant_id.sh
+sudo tee -a /usr/local/sbin/add-pslabs-variant_id.sh << 'EOF'
 #!/usr/bin/env bash
 
 # This is used to tag the 1st discovered branding directory for cockpit
 # i.e $(ID}${VERSION_ID}$-${VARIANT_ID}
 
 echo "VARIANT_ID=pslabs" >> /etc/os-release
-
 EOF
 
-chmod 755 /usr/local/sbin/add-pslabs-variant_id.sh
+chmod 744 /usr/local/sbin/add-pslabs-variant_id.sh
 
 note "setup direvent to monitor changes to /etc/os-release ..."
 apt-get install --yes -qq direvent
 
-cat << EOF > /etc/direvent.conf
+sudo tee -a /etc/direvent.conf << 'EOF'
 # See direvent.conf(5) for more information
 watcher {
     path /usr/lib;
@@ -111,7 +109,6 @@ watcher {
     event attrib;
     command "/usr/local/sbin/add-pslabs-variant_id.sh";
 }
-
 EOF
 
 systemctl enable  direvent
@@ -128,13 +125,12 @@ cd /etc/netplan
 cp 01-netcfg.yaml 01-netcfg.yaml.BAK
 
 # re-write the yaml file
-cat << EOF > /etc/netplan/01-netcfg.yaml
+sudo tee /etc/netplan/01-netcfg.yaml << 'EOF'
 # This file describes the network interfaces available on your system
 # For more information, see netplan(5).
 network:
   version: 2
   renderer: NetworkManager
-
 EOF
 
 # setup netplan for NM
@@ -181,16 +177,16 @@ ln -s ${CONDA_HOME}/etc/profile.d/conda.sh /etc/profile.d/conda.sh
 . /etc/profile.d/conda.sh
 
 # Update miniconda packages
-conda update --yes -q conda
-conda update --yes -q python
-conda update --yes -q --all
+conda update --yes conda
+conda update --yes python
+conda update --yes --all
 
 #
 # Install JupyterHub with conda
 #
 
 # Create conda env for JupyterHub and install it
-conda create --yes -q --name jupyterhub  -c conda-forge jupyterhub jupyterlab ipywidgets
+conda create --yes --name jupyterhub  -c conda-forge jupyterhub jupyterlab ipywidgets
 
 # Set highest priority channel to conda-forge
 # to keep conda update from downgrading to anaconda channel
@@ -200,7 +196,7 @@ touch $JHUB_HOME/.condarc
 conda config --env --prepend channels conda-forge
 conda config --env --set channel_priority false
 # go ahead and update to mixed channels now
-conda update --yes -q --all
+conda update --yes --all
 
 #
 # create and setup jupyterhub config file
@@ -213,10 +209,9 @@ ${JHUB_HOME}/bin/jupyterhub --generate-config
 sed -i "s/#c\.Spawner\.default_url = ''/c\.Spawner\.default_url = '\/lab'/" jupyterhub_config.py
 
 # don't show the install Python kernel spec
-cat << EOF >> jupyterhub_config.py
+sudo tee -a ${JHUB_HOME}/etc/jupyter/jupyter_notebook_config.py << 'EOF'
 # Allow removal of the default python3 kernelspec
 c.KernelSpecManager.ensure_native_kernel = False
-
 EOF
 
 # add SSL cert and key for using https to access hub
@@ -239,7 +234,8 @@ sed -i "s/#c\.JupyterHub\.ssl_key =.*/c\.JupyterHub\.ssl_key = '\/opt\/conda\/en
 # Create a systemd "Unit" file for starting jupyterhub,
 mkdir -p ${JHUB_HOME}/etc/systemd
 
-cat << EOF > ${CONDA_HOME}/envs/jupyterhub/etc/systemd/jupyterhub.service
+# have to use a regular here doc to parse CONDA_HOME
+cat << EOF > ${CONDA_HOME}/envs/jupyterhub/etc/systemd/jupyterhub.service 
 [Unit]
 Description=JupyterHub
 After=syslog.target network.target
@@ -251,7 +247,6 @@ ExecStart=${CONDA_HOME}/envs/jupyterhub/bin/jupyterhub -f ${CONDA_HOME}/envs/jup
 
 [Install]
 WantedBy=multi-user.target
-
 EOF
 
 # Link to systemd dir
@@ -270,8 +265,8 @@ cd ${SCRIPT_HOME}
 
 add_kernel() {
     # Args: "env-name" "package-name(s)" "display-name" "icon"
-    ${CONDA_HOME}/bin/conda create --yes -q --name $1 $2
-    ${CONDA_HOME}/bin/conda install --yes -q --name $1 ipykernel
+    ${CONDA_HOME}/bin/conda create --yes --name $1 $2
+    ${CONDA_HOME}/bin/conda install --yes --name $1 ipykernel
     ${CONDA_HOME}/envs/$1/bin/python -m ipykernel install --name $1 --display-name "$3"
     if [[ -f "kernel-icons/$4" ]]; then
         cp kernel-icons/$4 $KERNELS_DIR/$1/logo-64x64.png
@@ -317,5 +312,10 @@ ln -s pslabs-login.html login.html
 #conda install -c conda-forge jupyterlab-git
 #jupyter lab build
 # will need a restart of jhub before it works right 
+
+# hack for Ubuntu 18.04 ...sudo writes root owned clocal confi file to script runners home dir!
+if grep -q 'bionic' /etc/os-release ; then
+    $(chown -R  ${SUDO_USER}:${SUDO_USER} ${HOME}/.*)
+fi
 
 exit 0
