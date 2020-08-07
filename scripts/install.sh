@@ -47,12 +47,12 @@ USEGPU=''
 function add_nv_driver() {
     # Args: "driver version"
     apt-get install -q dkms
-    add-apt-repository ppa:graphics-drivers/ppa
+    add-apt-repository --yes -q ppa:graphics-drivers/ppa
     apt-get update
-    apt-get install--no-install-recommends --yes -qq nvidia-driver-$1
+    apt-get install --no-install-recommends --yes -qq nvidia-driver-$1
 }
 
-if [[ $(lspci | grep -q NVIDIA) ]]; then
+if lspci | grep -q NVIDIA; then
     success "[OK] Found NVIDIA GPU"
     USEGPU='True'
     if [[ $(which nvidia-smi) ]]; then 
@@ -60,11 +60,13 @@ if [[ $(lspci | grep -q NVIDIA) ]]; then
         note "Driver Version = ${driver-version}"
         if [[ ${driver-version%.*}+0 -lt 440 ]]; then
             error "Your NVIDIA Driver is out of date! ... Updating"
-            add_nv_driver ${NVIDIA_DRIVER_VERSION} || error "!!Driver install failed!!"
+            add_nv_driver ${NVIDIA_DRIVER_VERSION} && success "NVIDIA Driver Installed" \
+                || error "!!Driver install failed!!"
         fi
     else
         error "[Warning] NVIDIA Driver not installed ... Installing now" 
-        add_nv_driver ${NVIDIA_DRIVER_VERSION} || error "!!Driver install failed!!"
+        add_nv_driver ${NVIDIA_DRIVER_VERSION} && success "NVIDIA Driver Installed" \
+            || error "!!Driver install failed!!"
     fi
 else
     error "[Warning] NVIDIA GPU not detected, using CPU-only install..."
@@ -333,5 +335,11 @@ ln -s pslabs-login.html login.html
 if grep -q 'bionic' /etc/os-release ; then
     $(chown -R  ${SUDO_USER}:${SUDO_USER} ${HOME}/.*)
 fi
+
+success "\n\n*****************************************"
+success "INSTALL COMPLETE -- Please Restart System"
+success "Admin interface is on port 9090"
+success "JupyterHub login is on port 8000"
+success "*****************************************"
 
 exit 0
