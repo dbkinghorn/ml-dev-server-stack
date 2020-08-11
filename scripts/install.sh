@@ -54,11 +54,15 @@ else
     exit 1
 fi
 
+# Install extra packages (may already be installed)
+note "Installing extra packages -- curl openssl build-essential dkms emacs-nox"
+apt-get install --yes -qq curl openssl build-essential dkms emacs-nox
+
 note "Checking for NVIDIA GPU"
 
 function add_nv_driver() {
     # Args: "driver version"
-    apt-get install -q dkms
+    #apt-get install -q dkms
     add-apt-repository --yes -q ppa:graphics-drivers/ppa
     apt-get update
     apt-get install --no-install-recommends --yes -q nvidia-driver-$1
@@ -188,13 +192,6 @@ success "[OK] Cockpit installed"
 #
 note "Installing JupyterHub ..."
 
-# 
-
-
-
-# Install extra packages (may already be installed)
-apt-get install --yes -qq curl openssl build-essential emacs-nox
-
 #
 # Install conda (globally)
 #
@@ -312,9 +309,9 @@ function add_kernel() {
 
 # Anaconda3
 add_kernel "anaconda3" "anaconda" "Anaconda Python3" "anacondalogo.png"  
-add_kernel "tensorflow2-gpu" "tensorflow-gpu" "TensorFlow2 GPU" "tensorflow.png" 
+#add_kernel "tensorflow2-gpu" "tensorflow-gpu" "TensorFlow2 GPU" "tensorflow.png" 
 #add_kernel "tensorflow2-cpu" "tensorflow" "TensorFlow2 CPU" "tensorflow.png" 
-add_kernel "pytorch-gpu" "pytorch torchvision -c pytorch" "PyTorch GPU" "pytorch-logo-light.png" 
+#add_kernel "pytorch-gpu" "pytorch torchvision -c pytorch" "PyTorch GPU" "pytorch-logo-light.png" 
 
 
 #${CONDA_HOME}/bin/conda create --yes -q --name anaconda3 anaconda ipykernel
