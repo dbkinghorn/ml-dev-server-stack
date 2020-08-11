@@ -66,6 +66,12 @@ function add_nv_driver() {
     add-apt-repository --yes -q ppa:graphics-drivers/ppa
     apt-get update
     apt-get install --no-install-recommends --yes -q nvidia-driver-$1
+
+    sudo tee -a /etc/modprobe.d/blacklist-nouveau.conf << 'EOF'
+blacklist nouveau
+options nouveau modeset=0
+EOF
+    update-initramfs -u
 }
 
 function get_driver_version() {
