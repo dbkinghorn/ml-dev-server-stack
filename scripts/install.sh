@@ -322,7 +322,7 @@ function add_kernel() {
 }
 
 # Anaconda3
-add_kernel "anaconda3" "anaconda" "Anaconda Python3" "anacondalogo.png"  
+add_kernel "anaconda3" "anaconda -c anaconda" "Anaconda Python3" "anacondalogo.png"  
 #add_kernel "tensorflow2-gpu" "tensorflow-gpu" "TensorFlow2 GPU" "tensorflow.png" 
 #add_kernel "tensorflow2-cpu" "tensorflow" "TensorFlow2 CPU" "tensorflow.png" 
 #add_kernel "pytorch-gpu" "pytorch torchvision -c pytorch" "PyTorch GPU" "pytorch-logo-light.png" 
