@@ -179,9 +179,11 @@ EOF
 fi
 
 # setup netplan for NM
+note "Activating NetworkManager netplan"
 netplan generate
 netplan apply
 # make sure NM is running
+note "Enabeling/starting NetworkManager service"
 systemctl enable NetworkManager.service
 systemctl restart NetworkManager.service
 
@@ -197,20 +199,24 @@ note "Installing JupyterHub ..."
 #
 
 # Add repo
+note "...Adding conda/miniconda repo to apt source.list.d/conda.list..."
 curl -L https://repo.anaconda.com/pkgs/misc/gpgkeys/anaconda.asc | apt-key add -
 echo "deb [arch=amd64] https://repo.anaconda.com/pkgs/misc/debrepo/conda stable main" | sudo tee  /etc/apt/sources.list.d/conda.list 
 
 # Install
+note "... Installing conda..."
 apt-get update
 apt-get install --yes -qq conda  
 
 # Setup PATH and Environment for conda on login
+note "...Adding conda init script to profile.d"
 ln -s ${CONDA_HOME}/etc/profile.d/conda.sh /etc/profile.d/conda.sh
 
 # source the conda env for root
 . /etc/profile.d/conda.sh
 
 # Update miniconda packages
+note "...Updating conda, python, utilities..."
 conda update --yes conda
 conda update --yes python
 conda update --yes --all
@@ -220,11 +226,13 @@ conda update --yes --all
 #
 
 # Create conda env for JupyterHub and install it
+note "...Creating jupyterhub env, installing jupyterhub, jupyterlab, ipywidgets..."
 conda create --yes --name jupyterhub  -c conda-forge jupyterhub jupyterlab ipywidgets
 
 # Set highest priority channel to conda-forge
 # to keep conda update from downgrading to anaconda channel
 # This all needs to happen in the jupyterhub env!
+note "...Setting jupyterhub (local) environment to use conda-forge for updates..."
 conda activate jupyterhub
 touch $JHUB_HOME/.condarc 
 conda config --env --prepend channels conda-forge
@@ -235,20 +243,24 @@ conda update --yes --all
 #
 # create and setup jupyterhub config file
 #
+note "...Creating JupyterHub config..."
 mkdir -p ${JHUB_HOME}/etc/jupyterhub
 cd ${JHUB_HOME}/etc/jupyterhub
 ${JHUB_HOME}/bin/jupyterhub --generate-config
 
 # set default to jupyterlab
+note "...Setting default spawner to JupyterLab..."
 sed -i "s/#c\.Spawner\.default_url = ''/c\.Spawner\.default_url = '\/lab'/" jupyterhub_config.py
 
 # don't show the install Python kernel spec
+note "...Allow removal of default python kernelspec..."
 sudo tee -a ${JHUB_HOME}/etc/jupyter/jupyter_notebook_config.py << 'EOF'
 # Allow removal of the default python3 kernelspec
 c.KernelSpecManager.ensure_native_kernel = False
 EOF
 
 # add SSL cert and key for using https to access hub
+note "...Creating SSL certificate (self-signed).."
 mkdir -p ${JHUB_HOME}/etc/jupyterhub/ssl-certs
 cd ${JHUB_HOME}/etc/jupyterhub/ssl-certs
 
@@ -266,6 +278,7 @@ sed -i "s/#c\.JupyterHub\.ssl_key =.*/c\.JupyterHub\.ssl_key = '\/opt\/conda\/en
 #
 
 # Create a systemd "Unit" file for starting jupyterhub,
+note "...Setting up systemd service unit file... "
 mkdir -p ${JHUB_HOME}/etc/systemd
 
 # have to use a regular here doc to parse CONDA_HOME
@@ -287,13 +300,14 @@ EOF
 ln -s ${JHUB_HOME}/etc/systemd/jupyterhub.service /etc/systemd/system/jupyterhub.service
 
 # Start jupyterhub, enable it as a service,
+note "...Starting JupyterHub service..."
 systemctl start jupyterhub.service 
 systemctl enable jupyterhub.service
 
 #
 # Add some extra kernels for JupyterLab
 #
-
+note "...Adding extra default kernelspecs for JupyterLab..."
 # make sure we are in the script dir
 cd ${SCRIPT_HOME}
 
@@ -321,12 +335,13 @@ add_kernel "anaconda3" "anaconda" "Anaconda Python3" "anacondalogo.png"
 #
 # remove the jupyter kernelspec for the system miniconda python3 
 #
+note "...Removing default miniconda python kernelspec ..."
 echo "y" | ${JHUB_HOME}/bin/jupyter kernelspec remove python3 
 
 #
 # Add PSlabs branding to jupyterhub login page
 #
-
+note "...Adding Puget Systems Labs branding to JupyterHub login page..."
 # make sure we are in the script dir
 cd ${SCRIPT_HOME}
 
@@ -348,6 +363,7 @@ ln -s pslabs-login.html login.html
 # will need a restart of jhub before it works right 
 
 # hack for Ubuntu 18.04 ...sudo writes root owned clocal confi file to script runners home dir!
+note "...Clean up Ubuntu 18.04 'broken' sudo rubble from installers home dir... "
 if grep -q 'bionic' /etc/os-release ; then
     $(chown -R  ${SUDO_USER}:${SUDO_USER} ${HOME}/.*)
 fi
