@@ -4,10 +4,16 @@
 # Machine Learning Development Server Stack
 #
 # Copyright 2020 Puget Systems and D B Kinghorn
-
-# This script will do some sanity checks for installed software
-# and compatability with the server stack setup configurations
-#
+# 
+# This script will;
+# - check for a compatable base OS
+# - install needed extra software packages
+# - install/update the NVIDIA display driver if needed
+# - Insatll and configure Cockpit
+# - Set netplan to use NetworkManager for Cockpit (if not set)
+# - Install and configure JupyterHub with "single-user notbook server"
+#   using JupyterLab
+# - Add some default kernelspecs for JupyterLab 
 
 set -o pipefail
 
@@ -15,6 +21,15 @@ set -o pipefail
 #trap read debug
 
 SCRIPT_HOME=$(pwd)
+
+CONDA_HOME=/opt/conda
+JHUB_HOME=${CONDA_HOME}/envs/jupyterhub
+JHUB_CONFIG=${JHUB_HOME}/etc/jupyterhub/jupyterhub_config.py
+JUPYTER_SYS_DIR=/usr/local/share/jupyter
+KERNELS_DIR=${JUPYTER_SYS_DIR}/kernels
+
+NVIDIA_DRIVER_VERSION='440'
+USEGPU=''
 
 ERRORCOLOR=$(tput setaf 1)    # Red
 SUCCESSCOLOR=$(tput setaf 2)  # Green
@@ -41,36 +56,37 @@ fi
 
 note "Checking for NVIDIA GPU"
 
-NVIDIA_DRIVER_VERSION='440'
-USEGPU=''
-
 function add_nv_driver() {
     # Args: "driver version"
     apt-get install -q dkms
     add-apt-repository --yes -q ppa:graphics-drivers/ppa
     apt-get update
-    apt-get install --no-install-recommends --yes -qq nvidia-driver-$1
+    apt-get install --no-install-recommends --yes -q nvidia-driver-$1
+}
+
+function get_driver_version() {
+     nvidia-smi | grep Driver | cut -d " " -f 3;
 }
 
 if lspci | grep -q NVIDIA; then
     success "[OK] Found NVIDIA GPU"
-    USEGPU='True'
-    if [[ $(which nvidia-smi) ]]; then 
-        driver-version=$(nvidia-smi | grep Driver | cut -d " " -f 3) 
-        note "Driver Version = ${driver-version}"
-        if [[ ${driver-version%.*}+0 -lt 440 ]]; then
+    USEGPU=0 # 0=true
+    if [[ $(which nvidia-smi) ]]; then
+        driver_version=$(get_driver_version)
+        note "Driver Version = ${driver_version}"
+        if [[ ${driver_version%.*}+0 -lt 440 ]]; then
             error "Your NVIDIA Driver is out of date! ... Updating"
-            add_nv_driver ${NVIDIA_DRIVER_VERSION} && success "NVIDIA Driver Installed" \
+            add_nv_driver ${NVIDIA_DRIVER_VERSION} && success "[OK] NVIDIA Driver Installed" \
                 || error "!!Driver install failed!!"
         fi
     else
-        error "[Warning] NVIDIA Driver not installed ... Installing now" 
-        add_nv_driver ${NVIDIA_DRIVER_VERSION} && success "NVIDIA Driver Installed" \
-            || error "!!Driver install failed!!"
+        error "[Warning] NVIDIA Driver not installed ... Installing now"
+        add_nv_driver ${NVIDIA_DRIVER_VERSION} && success "[OK] NVIDIA Driver Installed" \
+               || error "!!NVIDIA Driver install failed!!"
     fi
 else
     error "[Warning] NVIDIA GPU not detected, using CPU-only install..."
-    USEGPU='False'
+    USEGPU=1 # 1=false
 fi
 
 #
@@ -137,19 +153,26 @@ systemctl restart direvent
 # Cockpit messes up if it is not using NetworkManger so lets change Ubuntu server to use it
 #
 
-note 'Changing netplan to use NetowrkManager on all interfaces ...'
-# backup existing yaml file
-cd /etc/netplan
-cp 01-netcfg.yaml 01-netcfg.yaml.BAK
+note "Checking netplan configuration ..."
+if grep -q -E 'renderer.*NetworkManager' /etc/netplan/*.yaml; then
+    note "[OK] NetworkManager in use"
+else
+    note 'Changing netplan to use NetowrkManager on all interfaces ...'
+    # backup existing yaml file
+    cd /etc/netplan
+    note "backing up existing yaml files"
+    for i in *.yaml; do mv "$i" "$i.bak"; done
 
-# re-write the yaml file
-sudo tee /etc/netplan/01-netcfg.yaml << 'EOF'
+    # re-write the yaml file
+    sudo tee /etc/netplan/01-netcfg.yaml << 'EOF'
 # This file describes the network interfaces available on your system
 # For more information, see netplan(5).
 network:
   version: 2
   renderer: NetworkManager
 EOF
+
+fi
 
 # setup netplan for NM
 netplan generate
@@ -167,11 +190,7 @@ note "Installing JupyterHub ..."
 
 # 
 
-CONDA_HOME=/opt/conda
-JHUB_HOME=${CONDA_HOME}/envs/jupyterhub
-JHUB_CONFIG=${JHUB_HOME}/etc/jupyterhub/jupyterhub_config.py
-JUPYTER_SYS_DIR=/usr/local/share/jupyter
-KERNELS_DIR=${JUPYTER_SYS_DIR}/kernels
+
 
 # Install extra packages (may already be installed)
 apt-get install --yes -qq curl openssl build-essential emacs-nox
@@ -336,7 +355,7 @@ if grep -q 'bionic' /etc/os-release ; then
     $(chown -R  ${SUDO_USER}:${SUDO_USER} ${HOME}/.*)
 fi
 
-success "\n\n*****************************************"
+success "*****************************************"
 success "INSTALL COMPLETE -- Please Restart System"
 success "Admin interface is on port 9090"
 success "JupyterHub login is on port 8000"
