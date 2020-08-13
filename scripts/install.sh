@@ -28,7 +28,7 @@ JHUB_CONFIG=${JHUB_HOME}/etc/jupyterhub/jupyterhub_config.py
 JUPYTER_SYS_DIR=/usr/local/share/jupyter
 KERNELS_DIR=${JUPYTER_SYS_DIR}/kernels
 
-NVIDIA_DRIVER_VERSION='440'
+NVIDIA_DRIVER_VERSION='450'
 USEGPU=''
 
 ERRORCOLOR=$(tput setaf 1)    # Red
@@ -78,13 +78,18 @@ function get_driver_version() {
      nvidia-smi | grep Driver | cut -d " " -f 3;
 }
 
+#function add_nv_driver() {
+#    # Args: driver version 
+#    sudo apt-get install --yes -q nvidia-driver-$1-server
+#}
+
 if lspci | grep -q NVIDIA; then
     success "[OK] Found NVIDIA GPU"
     USEGPU=0 # 0=true
     if [[ $(which nvidia-smi) ]]; then
         driver_version=$(get_driver_version)
         note "Driver Version = ${driver_version}"
-        if [[ ${driver_version%.*}+0 -lt 440 ]]; then
+        if [[ ${driver_version%%.*}+0 -lt ${NVIDIA_DRIVER_VERSION} ]]; then
             error "Your NVIDIA Driver is out of date! ... Updating"
             add_nv_driver ${NVIDIA_DRIVER_VERSION} && success "[OK] NVIDIA Driver Installed" \
                 || error "!!Driver install failed!!"
@@ -327,8 +332,9 @@ function add_kernel() {
     fi 
 }
 
-# Anaconda3
-add_kernel "anaconda3" "anaconda -c anaconda" "Anaconda Python3" "anacondalogo.png"  
+# Add some kernels by default
+add_kernel "py3" "python=3" "Python 3"
+#add_kernel "anaconda3" "anaconda -c anaconda" "Anaconda Python3" "anacondalogo.png"  
 #add_kernel "tensorflow2-gpu" "tensorflow-gpu" "TensorFlow2 GPU" "tensorflow.png" 
 #add_kernel "tensorflow2-cpu" "tensorflow" "TensorFlow2 CPU" "tensorflow.png" 
 #add_kernel "pytorch-gpu" "pytorch torchvision -c pytorch" "PyTorch GPU" "pytorch-logo-light.png" 
