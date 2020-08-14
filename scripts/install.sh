@@ -297,6 +297,7 @@ add_kernel "py3" "python=3" "Python 3"
 #add_kernel "tensorflow2-gpu" "tensorflow-gpu" "TensorFlow2 GPU" "tensorflow.png" 
 #add_kernel "tensorflow2-cpu" "tensorflow" "TensorFlow2 CPU" "tensorflow.png" 
 #add_kernel "pytorch-gpu" "pytorch torchvision -c pytorch" "PyTorch GPU" "pytorch-logo-light.png" 
+#add_kernel "pytorch-cpu" "pytorch torchvision cpuonly -c pytorch" "PyTorch CPU" "pytorch-logo-light.png" 
 
 
 #${CONDA_HOME}/bin/conda create --yes -q --name anaconda3 anaconda ipykernel
