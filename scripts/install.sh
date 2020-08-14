@@ -46,7 +46,7 @@ function error()   { echo "${ERRORCOLOR}${@}${RESET}">&2; }
 
 note "*******************************************************"
 note "Installing PSLabs-ML-Dev-Server-Stack at $(date)"
-nore "*******************************************************"
+note "*******************************************************"
 
 note "Checking OS version ..."
 
