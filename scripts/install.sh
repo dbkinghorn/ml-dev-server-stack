@@ -8,7 +8,6 @@
 # This script will;
 # - check for a compatable base OS
 # - install needed extra software packages
-# - install/update the NVIDIA display driver if needed
 # - Insatll and configure Cockpit
 # - Set netplan to use NetworkManager for Cockpit (if not set)
 # - Install and configure JupyterHub with "single-user notbook server"
@@ -20,6 +19,13 @@ set -o pipefail
 #set -x
 #trap read debug
 
+# Check for root/sudo
+if [[ $(id -u) -ne 0 ]]; then
+    echo "Please use sudo to run this script"
+    exit 1
+fi
+
+
 SCRIPT_HOME=$(pwd)
 
 CONDA_HOME=/opt/conda
@@ -28,8 +34,6 @@ JHUB_CONFIG=${JHUB_HOME}/etc/jupyterhub/jupyterhub_config.py
 JUPYTER_SYS_DIR=/usr/local/share/jupyter
 KERNELS_DIR=${JUPYTER_SYS_DIR}/kernels
 
-NVIDIA_DRIVER_VERSION='450'
-USEGPU=''
 
 ERRORCOLOR=$(tput setaf 1)    # Red
 SUCCESSCOLOR=$(tput setaf 2)  # Green
@@ -40,11 +44,11 @@ function note()    { echo "${NOTECOLOR}${@}${RESET}"; }
 function success() { echo "${SUCCESSCOLOR}${@}${RESET}";}
 function error()   { echo "${ERRORCOLOR}${@}${RESET}">&2; }
 
-#version_greater_equal() { printf '%s\n%s\n' "$2" "$1" | sort -V -C; }
-
+note "*******************************************************"
 note "Installing PSLabs-ML-Dev-Server-Stack at $(date)"
+note "*******************************************************"
 
-note "Checking OS version"
+note "Checking OS version ..."
 
 source /etc/os-release
 if [[ $NAME == "Ubuntu" ]] && [[ ${VERSION_ID/./}+0 -ge 1804 ]]; then
@@ -58,57 +62,13 @@ fi
 note "Installing extra packages -- curl openssl build-essential dkms emacs-nox"
 apt-get install --yes -qq curl openssl build-essential dkms emacs-nox
 
-note "Checking for NVIDIA GPU"
-
-function add_nv_driver() {
-    # Args: "driver version"
-    #apt-get install -q dkms
-    add-apt-repository --yes -q ppa:graphics-drivers/ppa
-    apt-get update
-    apt-get install --no-install-recommends --yes -q nvidia-driver-$1
-
-    sudo tee -a /etc/modprobe.d/blacklist-nouveau.conf << 'EOF'
-blacklist nouveau
-options nouveau modeset=0
-EOF
-    update-initramfs -u
-}
-
-function get_driver_version() {
-     nvidia-smi | grep Driver | cut -d " " -f 3;
-}
-
-#function add_nv_driver() {
-#    # Args: driver version 
-#    sudo apt-get install --yes -q nvidia-driver-$1-server
-#}
-
-if lspci | grep -q NVIDIA; then
-    success "[OK] Found NVIDIA GPU"
-    USEGPU=0 # 0=true
-    if [[ $(which nvidia-smi) ]]; then
-        driver_version=$(get_driver_version)
-        note "Driver Version = ${driver_version}"
-        if [[ ${driver_version%%.*}+0 -lt ${NVIDIA_DRIVER_VERSION} ]]; then
-            error "Your NVIDIA Driver is out of date! ... Updating"
-            add_nv_driver ${NVIDIA_DRIVER_VERSION} && success "[OK] NVIDIA Driver Installed" \
-                || error "!!Driver install failed!!"
-        fi
-    else
-        error "[Warning] NVIDIA Driver not installed ... Installing now"
-        add_nv_driver ${NVIDIA_DRIVER_VERSION} && success "[OK] NVIDIA Driver Installed" \
-               || error "!!NVIDIA Driver install failed!!"
-    fi
-else
-    error "[Warning] NVIDIA GPU not detected, using CPU-only install..."
-    USEGPU=1 # 1=false
-fi
 
 #
 # Install Cockpit
 #
-
-note "Installing Cockpit ..."
+note "***********************************"
+note "Installing and configuring Cockpit"
+note "***********************************"
 
 if grep -q 'bionic' /etc/os-release; then
   apt-get install --yes -qq -t bionic-backports cockpit && success "[OK] Cockpit installed" \
@@ -132,9 +92,7 @@ echo "VARIANT_ID=pslabs" | sudo tee -a /etc/os-release
 
 cp -a ubuntu-pslabs /usr/share/cockpit/branding/
 
-
 # make it update proof
-
 # add a script to set variant id
 sudo tee -a /usr/local/sbin/add-pslabs-variant_id.sh << 'EOF'
 #!/usr/bin/env bash
@@ -147,36 +105,36 @@ EOF
 
 chmod 744 /usr/local/sbin/add-pslabs-variant_id.sh
 
-note "setup direvent to monitor changes to /etc/os-release ..."
+note "seting up direvent to monitor changes to /etc/os-release ..."
 apt-get install --yes -qq direvent
 
 sudo tee -a /etc/direvent.conf << 'EOF'
-# See direvent.conf(5) for more information
+#PSL-START
 watcher {
     path /usr/lib;
     file os-release;
     event attrib;
     command "/usr/local/sbin/add-pslabs-variant_id.sh";
 }
+#PSL-STOP
 EOF
 
 systemctl enable  direvent
 systemctl restart direvent
 
-
 #
 # Cockpit messes up if it is not using NetworkManger so lets change Ubuntu server to use it
 #
-
 note "Checking netplan configuration ..."
+note "***Cockpit needs NetworkManager for net interface control***"
 if grep -q -E 'renderer.*NetworkManager' /etc/netplan/*.yaml; then
     note "[OK] NetworkManager in use"
 else
     note 'Changing netplan to use NetowrkManager on all interfaces ...'
     # backup existing yaml file
     cd /etc/netplan
-    note "backing up existing yaml files"
-    for i in *.yaml; do mv "$i" "$i.bak"; done
+    note "backing up existing config yaml files..."
+    for i in *.yaml; do mv "$i" "$i.pslbak"; done
 
     # re-write the yaml file
     sudo tee /etc/netplan/01-netcfg.yaml << 'EOF'
@@ -190,44 +148,45 @@ EOF
 fi
 
 # setup netplan for NM
-note "Activating NetworkManager netplan"
+note "Activating NetworkManager netplan..."
 netplan generate
 netplan apply
 # make sure NM is running
-note "Enabeling/starting NetworkManager service"
+note "Enabeling/starting NetworkManager service..."
 systemctl enable NetworkManager.service
 systemctl restart NetworkManager.service
 
-success "[OK] Cockpit installed"
+success "[OK] Cockpit installed and configured"
 
 #
 # Install JupyterHub 
 #
-note "Installing JupyterHub ..."
-
+note "************************"
+note "Installing JupyterHub"
+note "************************"
 #
 # Install conda (globally)
 #
 
 # Add repo
-note "...Adding conda/miniconda repo to apt source.list.d/conda.list..."
+note "Adding conda/miniconda repo to apt source.list.d/conda.list..."
 curl -L https://repo.anaconda.com/pkgs/misc/gpgkeys/anaconda.asc | apt-key add -
 echo "deb [arch=amd64] https://repo.anaconda.com/pkgs/misc/debrepo/conda stable main" | sudo tee  /etc/apt/sources.list.d/conda.list 
 
 # Install
-note "... Installing conda..."
+note "Installing conda..."
 apt-get update
 apt-get install --yes -qq conda  
 
 # Setup PATH and Environment for conda on login
-note "...Adding conda init script to profile.d"
+note "Adding conda init script to profile.d..."
 ln -s ${CONDA_HOME}/etc/profile.d/conda.sh /etc/profile.d/conda.sh
 
 # source the conda env for root
 . /etc/profile.d/conda.sh
 
 # Update miniconda packages
-note "...Updating conda, python, utilities..."
+note "Updating conda, python, utilities..."
 conda update --yes conda
 conda update --yes python
 conda update --yes --all
@@ -237,13 +196,13 @@ conda update --yes --all
 #
 
 # Create conda env for JupyterHub and install it
-note "...Creating jupyterhub env, installing jupyterhub, jupyterlab, ipywidgets..."
+note "Creating jupyterhub env, installing jupyterhub, jupyterlab, ipywidgets..."
 conda create --yes --name jupyterhub  -c conda-forge jupyterhub jupyterlab ipywidgets
 
 # Set highest priority channel to conda-forge
 # to keep conda update from downgrading to anaconda channel
 # This all needs to happen in the jupyterhub env!
-note "...Setting jupyterhub (local) environment to use conda-forge for updates..."
+note "Setting jupyterhub (local) environment to use conda-forge for updates..."
 conda activate jupyterhub
 touch $JHUB_HOME/.condarc 
 conda config --env --prepend channels conda-forge
@@ -254,24 +213,24 @@ conda update --yes --all
 #
 # create and setup jupyterhub config file
 #
-note "...Creating JupyterHub config..."
+note "Creating JupyterHub config..."
 mkdir -p ${JHUB_HOME}/etc/jupyterhub
 cd ${JHUB_HOME}/etc/jupyterhub
 ${JHUB_HOME}/bin/jupyterhub --generate-config
 
 # set default to jupyterlab
-note "...Setting default spawner to JupyterLab..."
+note "Setting default spawner to JupyterLab..."
 sed -i "s/#c\.Spawner\.default_url = ''/c\.Spawner\.default_url = '\/lab'/" jupyterhub_config.py
 
-# don't show the install Python kernel spec
-note "...Allow removal of default python kernelspec..."
+# Allow the installer Python jupyter kernel spec to be reomved
+note "Allowing removal of default installer python jupyter kernelspec..."
 sudo tee -a ${JHUB_HOME}/etc/jupyter/jupyter_notebook_config.py << 'EOF'
 # Allow removal of the default python3 kernelspec
 c.KernelSpecManager.ensure_native_kernel = False
 EOF
 
 # add SSL cert and key for using https to access hub
-note "...Creating SSL certificate (self-signed).."
+note "Creating SSL certificate (self-signed)..."
 mkdir -p ${JHUB_HOME}/etc/jupyterhub/ssl-certs
 cd ${JHUB_HOME}/etc/jupyterhub/ssl-certs
 
@@ -289,7 +248,7 @@ sed -i "s/#c\.JupyterHub\.ssl_key =.*/c\.JupyterHub\.ssl_key = '\/opt\/conda\/en
 #
 
 # Create a systemd "Unit" file for starting jupyterhub,
-note "...Setting up systemd service unit file... "
+note "Setting up systemd jupyterhub service unit file... "
 mkdir -p ${JHUB_HOME}/etc/systemd
 
 # have to use a regular here doc to parse CONDA_HOME
@@ -311,14 +270,14 @@ EOF
 ln -s ${JHUB_HOME}/etc/systemd/jupyterhub.service /etc/systemd/system/jupyterhub.service
 
 # Start jupyterhub, enable it as a service,
-note "...Starting JupyterHub service..."
+note "Starting JupyterHub service..."
 systemctl start jupyterhub.service 
 systemctl enable jupyterhub.service
 
 #
 # Add some extra kernels for JupyterLab
 #
-note "...Adding extra default kernelspecs for JupyterLab..."
+note "Adding Python 3 default kernelspec for JupyterLab..."
 # make sure we are in the script dir
 cd ${SCRIPT_HOME}
 
@@ -347,13 +306,13 @@ add_kernel "py3" "python=3" "Python 3"
 #
 # remove the jupyter kernelspec for the system miniconda python3 
 #
-note "...Removing default miniconda python kernelspec ..."
+note "...Removing default installer miniconda python kernelspec ..."
 echo "y" | ${JHUB_HOME}/bin/jupyter kernelspec remove python3 
 
 #
 # Add PSlabs branding to jupyterhub login page
 #
-note "...Adding Puget Systems Labs branding to JupyterHub login page..."
+note "Adding Puget Systems Labs branding to JupyterHub login page..."
 # make sure we are in the script dir
 cd ${SCRIPT_HOME}
 
@@ -374,16 +333,18 @@ ln -s pslabs-login.html login.html
 #jupyter lab build
 # will need a restart of jhub before it works right 
 
-# hack for Ubuntu 18.04 ...sudo writes root owned clocal confi file to script runners home dir!
-note "...Clean up Ubuntu 18.04 'broken' sudo rubble from installers home dir... "
+# hack for Ubuntu 18.04 ...sudo writes root owned config files to script runners home dir!
+note "Cleaning up Ubuntu 18.04 'broken' sudo rubble from installers home dir... "
 if grep -q 'bionic' /etc/os-release ; then
     $(chown -R  ${SUDO_USER}:${SUDO_USER} ${HOME}/.*)
 fi
 
 success "*****************************************"
-success "INSTALL COMPLETE -- Please Restart System"
+success "INSTALL COMPLETE"
 success "Admin interface is on port 9090"
 success "JupyterHub login is on port 8000"
+success "Add Jupyter kernels with" 
+success "'sudo add-sys-jupyter-kernels.sh "
 success "*****************************************"
 
 exit 0
