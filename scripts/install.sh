@@ -183,7 +183,7 @@ note "Adding conda init script to profile.d..."
 ln -s ${CONDA_HOME}/etc/profile.d/conda.sh /etc/profile.d/conda.sh
 
 # source the conda env for root
-. /etc/profile.d/conda.sh
+source /etc/profile.d/conda.sh
 
 # Update miniconda packages
 note "Updating conda, python, utilities..."
@@ -296,7 +296,7 @@ add_kernel "py3" "python=3" "Python 3"
 #add_kernel "anaconda3" "anaconda -c anaconda" "Anaconda Python3" "anacondalogo.png"  
 #add_kernel "tensorflow2-gpu" "tensorflow-gpu" "TensorFlow2 GPU" "tensorflow.png" 
 #add_kernel "tensorflow2-cpu" "tensorflow" "TensorFlow2 CPU" "tensorflow.png" 
-#add_kernel "pytorch-gpu" "pytorch torchvision -c pytorch" "PyTorch GPU" "pytorch-logo-light.png" 
+#add_kernel "pytorch-gpu" "pytorch torchvision cudatoolkit=10.2 -c pytorch" "PyTorch GPU" "pytorch-logo-light.png" 
 #add_kernel "pytorch-cpu" "pytorch torchvision cpuonly -c pytorch" "PyTorch CPU" "pytorch-logo-light.png" 
 
 

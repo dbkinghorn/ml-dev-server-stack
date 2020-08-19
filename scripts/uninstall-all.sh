@@ -5,14 +5,14 @@
 # and all of their configuration files and assets
 #
 
-if [[ $1 -ne "really-remove" ]]; then
+if [[ $1 != "really-remove" ]]; then
     echo "!Before you do this read the script and be sure you agree with it!"
     echo "Then rerun the script with"
     echo "sudo ./uninstall-all.sh really-remove"
     exit 1
 fi
 
-SCRIPT_HOME=$PWD
+SCRIPT_HOME=$(pwd)
 
 CONDA_HOME=/opt/conda
 JHUB_HOME=${CONDA_HOME}/envs/jupyterhub
@@ -26,7 +26,7 @@ rm -Rf /etc/cockpit
 rm -Rf /usr/share/cockpit/branding/ubuntu-pslabs
 rm /usr/local/sbin/add-pslabs-variant_id.sh
 echo "leaving direvent enabled but removing PSLabs 'watcher' from config"
-sed -i '/#PSL_START/,/#PSL-STOP/d' /etc/direvent.conf;
+sed -i '/#PSL-START/,/#PSL-STOP/d' /etc/direvent.conf;
 echo "netplan config not restored (if changed by install) see /etc/netplan to restore from '.pslback' file"
 
 # Remove the JupyterHub service
