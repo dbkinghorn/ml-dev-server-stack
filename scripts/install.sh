@@ -10,9 +10,22 @@
 # - install needed extra software packages
 # - Insatll and configure Cockpit
 # - Set netplan to use NetworkManager for Cockpit (if not set)
-# - Install and configure JupyterHub with "single-user notbook server"
-#   using JupyterLab
-# - Add some default kernelspecs for JupyterLab 
+# - Install and configure JupyterHub with "LocalProcessSpawner for single user servers"
+#   Setup JupyterLab
+# - Add some default notebook kernels and extensions for JupyterLab 
+
+if [[ ${#@} -ne 0 ]] && [[ "${@#"--help"}" = "" ]]; then
+  printf -- '
+# This script will;\n
+  - check for a compatable base OS
+  - install needed extra software packages
+  - Insatll and configure Cockpit
+  - Set netplan to use NetworkManager for Cockpit (if not set)
+  - Install and configure JupyterHub with "LocalProcessSpawner for single user servers"
+  - Setup JupyterLab
+  - Add some default notebook kernels and extensions for JupyterLab\n\n';
+  exit 0;
+fi
 
 set -o pipefail
 
@@ -26,6 +39,7 @@ if [[ $(id -u) -ne 0 ]]; then
 fi
 
 
+# Script variables
 SCRIPT_HOME=$(pwd)
 
 CONDA_HOME=/opt/conda
@@ -34,10 +48,9 @@ JHUB_CONFIG=${JHUB_HOME}/etc/jupyterhub/jupyterhub_config.py
 JUPYTER_SYS_DIR=/usr/local/share/jupyter
 KERNELS_DIR=${JUPYTER_SYS_DIR}/kernels
 
-
-ERRORCOLOR=$(tput setaf 1)    # Red
-SUCCESSCOLOR=$(tput setaf 2)  # Green
 NOTECOLOR=$(tput setaf 3)     # Yellow
+SUCCESSCOLOR=$(tput setaf 2)  # Green
+ERRORCOLOR=$(tput setaf 1)    # Red
 RESET=$(tput sgr0)
 
 function note()    { echo "${NOTECOLOR}${@}${RESET}"; }
@@ -59,8 +72,8 @@ else
 fi
 
 # Install extra packages (may already be installed)
-note "Installing extra packages -- curl openssl build-essential dkms emacs-nox"
-apt-get install --yes -qq curl openssl build-essential dkms emacs-nox
+note "Installing extra packages -- curl openssl build-essential dkms emacs-nox pandoc"
+apt-get install --yes -qq curl openssl build-essential dkms emacs-nox pandoc
 
 
 #
