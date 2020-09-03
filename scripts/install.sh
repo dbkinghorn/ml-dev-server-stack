@@ -10,11 +10,38 @@
 # - install needed extra software packages
 # - Insatll and configure Cockpit
 # - Set netplan to use NetworkManager for Cockpit (if not set)
-# - Install and configure JupyterHub with "single-user notbook server"
-#   using JupyterLab
-# - Add some default kernelspecs for JupyterLab 
+# - Install and configure JupyterHub with "LocalProcessSpawner for single user servers"
+#   Setup JupyterLab
+# - Add some default notebook kernels and extensions for JupyterLab 
 
-set -o pipefail
+# Start install log. Will go to install.log
+( 
+
+if [[ ${#@} -ne 0 ]] && [[ "${@#"--help"}" = "" ]]; then
+  printf -- '
+USAGE:  sudo ./install.sh\n
+# This script will;\n
+  - check for a compatable base OS
+  - install needed extra software packages
+  - Insatll and configure Cockpit
+  - Set netplan to use NetworkManager for Cockpit (if not set)
+  - Install and configure JupyterHub with "LocalProcessSpawner for single user servers"
+  - Add "self-signed" SSL certificates for JupyterHub
+  - Setup JupyterLab
+  - Add some default notebook kernels and extensions for JupyterLab\n\n';
+  exit 0;
+fi 
+
+#set -e
+set -o errexit # exit on errors
+set -o errtrace # trap on ERR in function and subshell
+trap 'install-error $? $LINENO' ERR
+install-error() {
+  echo "Error $1 occurred on $2"
+  echo "YIKS! something failed!" 
+  echo "Check install.log" 
+  echo "You can run un-install.sh for clean-up"
+}
 
 #set -x
 #trap read debug
@@ -26,6 +53,7 @@ if [[ $(id -u) -ne 0 ]]; then
 fi
 
 
+# Script variables
 SCRIPT_HOME=$(pwd)
 
 CONDA_HOME=/opt/conda
@@ -34,10 +62,9 @@ JHUB_CONFIG=${JHUB_HOME}/etc/jupyterhub/jupyterhub_config.py
 JUPYTER_SYS_DIR=/usr/local/share/jupyter
 KERNELS_DIR=${JUPYTER_SYS_DIR}/kernels
 
-
-ERRORCOLOR=$(tput setaf 1)    # Red
-SUCCESSCOLOR=$(tput setaf 2)  # Green
 NOTECOLOR=$(tput setaf 3)     # Yellow
+SUCCESSCOLOR=$(tput setaf 2)  # Green
+ERRORCOLOR=$(tput setaf 1)    # Red
 RESET=$(tput sgr0)
 
 function note()    { echo "${NOTECOLOR}${@}${RESET}"; }
@@ -59,8 +86,8 @@ else
 fi
 
 # Install extra packages (may already be installed)
-note "Installing extra packages -- curl openssl build-essential dkms emacs-nox"
-apt-get install --yes -qq curl openssl build-essential dkms emacs-nox
+note "Installing extra packages -- curl openssl build-essential dkms emacs-nox pandoc"
+apt-get install --yes -qq curl openssl build-essential dkms emacs-nox pandoc
 
 
 #
@@ -183,7 +210,7 @@ note "Adding conda init script to profile.d..."
 ln -s ${CONDA_HOME}/etc/profile.d/conda.sh /etc/profile.d/conda.sh
 
 # source the conda env for root
-. /etc/profile.d/conda.sh
+source /etc/profile.d/conda.sh
 
 # Update miniconda packages
 note "Updating conda, python, utilities..."
@@ -296,7 +323,7 @@ add_kernel "py3" "python=3" "Python 3"
 #add_kernel "anaconda3" "anaconda -c anaconda" "Anaconda Python3" "anacondalogo.png"  
 #add_kernel "tensorflow2-gpu" "tensorflow-gpu" "TensorFlow2 GPU" "tensorflow.png" 
 #add_kernel "tensorflow2-cpu" "tensorflow" "TensorFlow2 CPU" "tensorflow.png" 
-#add_kernel "pytorch-gpu" "pytorch torchvision -c pytorch" "PyTorch GPU" "pytorch-logo-light.png" 
+#add_kernel "pytorch-gpu" "pytorch torchvision cudatoolkit=10.2 -c pytorch" "PyTorch GPU" "pytorch-logo-light.png" 
 #add_kernel "pytorch-cpu" "pytorch torchvision cpuonly -c pytorch" "PyTorch CPU" "pytorch-logo-light.png" 
 
 
@@ -342,10 +369,12 @@ fi
 
 success "*****************************************"
 success "INSTALL COMPLETE"
-success "Admin interface is on port 9090"
+success "Cockpit admin interface is on port 9090"
 success "JupyterHub login is on port 8000"
-success "Add Jupyter kernels with" 
-success "'sudo add-sys-jupyter-kernels.sh "
+success "_________________________________________"
+success "Add Jupyter kernels and extensions with" 
+success "'sudo ./post-install-extras.sh "
 success "*****************************************"
 
 exit 0
+) |& tee ./install.log
