@@ -14,20 +14,34 @@
 #   Setup JupyterLab
 # - Add some default notebook kernels and extensions for JupyterLab 
 
+# Start install log. Will go to install.log
+( 
+
 if [[ ${#@} -ne 0 ]] && [[ "${@#"--help"}" = "" ]]; then
   printf -- '
+USAGE:  sudo ./install.sh\n
 # This script will;\n
   - check for a compatable base OS
   - install needed extra software packages
   - Insatll and configure Cockpit
   - Set netplan to use NetworkManager for Cockpit (if not set)
   - Install and configure JupyterHub with "LocalProcessSpawner for single user servers"
+  - Add "self-signed" SSL certificates for JupyterHub
   - Setup JupyterLab
   - Add some default notebook kernels and extensions for JupyterLab\n\n';
   exit 0;
-fi
+fi 
 
-set -o pipefail
+#set -e
+set -o errexit # exit on errors
+set -o errtrace # trap on ERR in function and subshell
+trap 'install-error $? $LINENO' ERR
+install-error() {
+  echo "Error $1 occurred on $2"
+  echo "YIKS! something failed!" 
+  echo "Check install.log" 
+  echo "You can run un-install.sh for clean-up"
+}
 
 #set -x
 #trap read debug
@@ -355,10 +369,12 @@ fi
 
 success "*****************************************"
 success "INSTALL COMPLETE"
-success "Admin interface is on port 9090"
+success "Cockpit admin interface is on port 9090"
 success "JupyterHub login is on port 8000"
-success "Add Jupyter kernels with" 
-success "'sudo add-sys-jupyter-kernels.sh "
+success "_________________________________________"
+success "Add Jupyter kernels and extensions with" 
+success "'sudo ./post-install-extras.sh "
 success "*****************************************"
 
 exit 0
+) |& tee ./install.log
