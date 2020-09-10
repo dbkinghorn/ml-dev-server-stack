@@ -1,0 +1,5 @@
+[33m*******************************************************(B[m
+[33mInstalling JupyterLab kernels and extensions Fri Sep  4 17:05:44 PDT 2020(B[m
+[33m*******************************************************(B[m
+[33mChecking for NVIDIA GPU and Driver version(B[m
+[31m[Warning] NVIDIA GPU not detected, using CPU-only Kernels...(B[m
