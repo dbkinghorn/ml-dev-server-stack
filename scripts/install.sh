@@ -40,7 +40,7 @@ install-error() {
   echo "Error $1 occurred on $2"
   echo "YIKS! something failed!" 
   echo "Check install.log" 
-  echo "You can run un-install.sh for clean-up"
+  echo "You can run uninstall-all.sh for clean-up"
 }
 
 #set -x
@@ -87,7 +87,7 @@ fi
 
 # Install extra packages (may already be installed)
 note "Installing extra packages -- curl openssl build-essential dkms emacs-nox pandoc"
-apt-get install --yes -qq curl openssl build-essential dkms emacs-nox pandoc
+apt-get install --yes -qq curl openssl build-essential dkms emacs-nox pandoc  imagemagick
 
 
 #
@@ -373,7 +373,7 @@ success "Cockpit admin interface is on port 9090"
 success "JupyterHub login is on port 8000"
 success "_________________________________________"
 success "Add Jupyter kernels and extensions with" 
-success "'sudo ./post-install-extras.sh "
+success "'sudo ./post-install-jlab.sh "
 success "*****************************************"
 
 exit 0
