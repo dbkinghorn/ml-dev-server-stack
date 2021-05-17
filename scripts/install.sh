@@ -107,10 +107,10 @@ fi
 
 note "Adding cockpit config ..."
 
-sudo tee -a /etc/cockpit/cockpit.conf << 'EOF'
-[Session]
-IdleTimeout=0
-EOF
+#sudo tee -a /etc/cockpit/cockpit.conf << 'EOF'
+#[Session]
+#IdleTimeout=0
+#EOF
 
 note "Adding Puget Systems Labs branding to cockpit..."
 
