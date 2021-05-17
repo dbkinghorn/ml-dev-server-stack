@@ -247,7 +247,7 @@ ${JHUB_HOME}/bin/jupyterhub --generate-config
 
 # set default to jupyterlab
 note "Setting default spawner to JupyterLab..."
-sed -i "s/#c\.Spawner\.default_url = ''/c\.Spawner\.default_url = '\/lab'/" jupyterhub_config.py
+sed -i "s/#[[:space:]]*c\.Spawner\.default_url = ''/c\.Spawner\.default_url = '\/lab'/" jupyterhub_config.py
 
 # Allow the installer Python jupyter kernel spec to be reomved
 note "Allowing removal of default installer python jupyter kernelspec..."
@@ -266,8 +266,8 @@ openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \
    -subj "/C=US/ST=Washington/L=Auburn/O=Puget Systems/OU=Labs/CN=Puget Systems Labs Self-Signed" \
    -addext "subjectAltName=DNS:localhost,DNS:localhost,IP:127.0.0.1"
 
-sed -i "s/#c\.JupyterHub\.ssl_cert =.*/c\.JupyterHub\.ssl_cert = '\/opt\/conda\/envs\/jupyterhub\/etc\/jupyterhub\/ssl-certs\/jhubssl.crt'/" ${JHUB_CONFIG}
-sed -i "s/#c\.JupyterHub\.ssl_key =.*/c\.JupyterHub\.ssl_key = '\/opt\/conda\/envs\/jupyterhub\/etc\/jupyterhub\/ssl-certs\/jhubssl.key'/" ${JHUB_CONFIG}
+sed -i "s/#[[:space:]]*c\.JupyterHub\.ssl_cert =.*/c\.JupyterHub\.ssl_cert = '\/opt\/conda\/envs\/jupyterhub\/etc\/jupyterhub\/ssl-certs\/jhubssl.crt'/" ${JHUB_CONFIG}
+sed -i "s/#[[:space:]]*c\.JupyterHub\.ssl_key =.*/c\.JupyterHub\.ssl_key = '\/opt\/conda\/envs\/jupyterhub\/etc\/jupyterhub\/ssl-certs\/jhubssl.key'/" ${JHUB_CONFIG}
 
 
 #
