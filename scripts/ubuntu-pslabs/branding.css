@@ -16,6 +16,7 @@ body.login-pf {
     font-size: 18pt;
     text-transform: uppercase;
 }
+
 /*
 #brand:before {
     content: "${PRETTY_NAME}";
@@ -30,7 +31,7 @@ body.login-pf {
 }
 */
 #brand:before {
-    content: "PSLabs - ML Dev Server";
+    content: "Puget Systems - AI-1";
 }
 
 #index-brand {
